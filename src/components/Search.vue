@@ -18,7 +18,7 @@
       <input type="button" value="Submit">
     </form>
 
-    <div v-for="song in songs" class="song-card">
+    <div v-for="song in songs" v-bind:key="song.id" class="song-card">
       <img :src="song.album.cover" :alt="song.album.title">
       <div class="info">
         <p>Titre : {{ song.title }}</p>
@@ -26,7 +26,7 @@
         <p>Artiste : {{ song.artist.name }}</p>
       </div>
       <audio :src="song.preview" controls/>
-      <a href="#" class="favorit-btn" @click.prevent="addFav">
+      <a href="#" class="favorit-btn" @click.prevent="addFav(song)">
         <i class="fa-heart" :class="updateFav" id="btn"></i>
       </a>
     </div>
@@ -50,39 +50,40 @@ export default {
     submit() {
       DeezerService.fetchBy(this.title, this.filter).then(songs => {
         this.songs = songs.data;
-        console.log(this.songs);
       });
     },
     getFavs() {
-      return JSON.parse(localStorage.getItem("favoritsSongs"));
+      return JSON.parse(localStorage.getItem("favSongs"));
     },
-    addFav() {
+    addFav(song) {
       if (!localStorage.getItem("favSongs")) {
         localStorage.setItem("favSongs", JSON.stringify([]));
       }
-      if (this.getFavs().filter(song => song.id === this.songs.id).length > 0) {
-        const index = this.getFavs()
-          .map(e => e.id)
-          .indexOf(this.songs.id);
+
+      const favoriteIds = this.getFavs().map(item => item.id);
+
+      if (favoriteIds.includes(song.id)) {
+        const index = this.getFavs().indexOf(this.songs.id);
         const data = this.getFavs();
         data.splice(index, 1);
-        this.$emit("dislike", this.songs.id);
+        this.$emit("dislike", song.id);
+
         localStorage.removeItem("favSongs");
         localStorage.setItem("favSongs", JSON.stringify(data));
+        console.log(song);
         this.liked = "far";
       } else {
-        const existing = this.getFavs();
-        existing.push(this.songs);
+        const data = this.getFavs();
+        data.push(song);
+
         localStorage.removeItem("favSongs");
-        localStorage.setItem("favSongs", JSON.stringify(existing));
+        localStorage.setItem("favSongs", JSON.stringify(data));
+        console.log(song);
         this.liked = "fas";
       }
     },
-    isFav() {
-      if (
-        this.getFavs() &&
-        this.getFavs().filter(song => song.id === this.songs.id).length > 0
-      ) {
+    isFav(song) {
+      if (this.getFavs().map(item => item.id).includes(song.id)) {
         this.liked = "fas";
       } else {
         this.liked = "far";
@@ -90,8 +91,8 @@ export default {
     }
   },
   computed: {
-    updateFav() {
-      this.isFav();
+    updateFav(song) {
+      this.isFav(song);
       return this.liked;
     }
   }
